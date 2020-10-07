@@ -1,7 +1,0 @@
-[submodule "ttgoDriver"]
-	path = ttgoDriver
-	url = https://github.com/rdorbolo/esp32-ttg0-display.git
-  
-[submodule "esp32-ttgo-display"]
-	path = esp32-ttgo-display
-	url = https://github.com/rdorbolo/esp32-ttgo-display.git
