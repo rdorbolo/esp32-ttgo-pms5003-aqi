@@ -1,0 +1,4 @@
+[submodule "ttgoDriver"]
+	path = ttgoDriver
+	url = https://github.com/rdorbolo/esp32-ttg0-display.git
+  
