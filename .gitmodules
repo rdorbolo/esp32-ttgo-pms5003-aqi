@@ -1,0 +1,3 @@
+[submodule "esp32-ttgo-display"]
+	path = esp32-ttgo-display
+	url = https://github.com/rdorbolo/esp32-ttgo-display.git
