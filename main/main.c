@@ -19,11 +19,10 @@
 
 #include "ttgo.h"
 
-
 #define UART_RX 27
 #define UART_TX 26
 
-extern uint8_t bgRed, bgGreen,  bgBlue;
+extern uint8_t bgRed, bgGreen, bgBlue;
 
 struct AirData
 {
@@ -40,15 +39,12 @@ struct AirData
 } airData;
 
 int displayMode = 0;
- 
-
 
 //The driver samples the SDA (input data) at rising edge of SCL,
 //but shifts SDA (output data) at the falling edge of SCL
 
 //After the read status command has been sent, the SDA line must be set to tri-state no later than at the
 //falling edge of SCL of the last bit.
-
 
 unsigned calcAqi(unsigned pm25)
 {
@@ -107,13 +103,14 @@ unsigned calcAqi(unsigned pm25)
         interval_x0 = 350;
         interval_x1 = 500;
     }
-    else{
+    else
+    {
         return pm25;
     }
     int retval = interval_y0 + ((pm25 - interval_x0) * (interval_y1 - interval_y0) / (interval_x1 - interval_x0));
+   
     return retval;
 }
-
 
 void test1()
 {
@@ -121,43 +118,101 @@ void test1()
     //TTGO Logo is top
     char s[30];
     int count = 0;
+    int oldColorNumber = -1;
 
     while (1)
     {
 
-        if (displayMode == 0) {
-            bgRed = 0x40;
-            bgGreen = 0x50;
-            bgBlue  =  0xe0;
-            clearScreen(bgRed, bgGreen,bgBlue);
+        if (displayMode == 0)
+        {
+            bgRed = 0x00;
+            bgGreen = 0x00;
+            bgBlue = 0x00;
+            clearScreen(bgRed, bgGreen, bgBlue);
         }
 
         while (1)
         {
+            unsigned aqi = calcAqi(airData.pm2_5);
+            unsigned colorNumber;
+
+            if (aqi < 51)
+            {
+                colorNumber = 0; //green
+                bgRed = 0x00;
+                bgGreen = 0xdf;
+                bgBlue = 0x00;
+            }
+            else if (aqi < 101)
+            {
+                colorNumber = 1; //yellow
+                bgRed = 0xdf;
+                bgGreen = 0xdf;
+                bgBlue = 0x00;
+            }
+            else if (aqi < 151)
+            {
+                colorNumber = 2; // Orange;
+                bgRed = 0xdf;
+                bgGreen = 0xb0;
+                bgBlue = 0x00;
+            }
+            else if (aqi < 201)
+            {
+                colorNumber = 3; // Red;
+                bgRed = 0xef;
+                bgGreen = 0x00;
+                bgBlue = 0x00;
+            }
+            else if (aqi < 301)
+            {
+                colorNumber = 4; // purple;
+                bgRed = 0xd0;
+                bgGreen = 0x00;
+                bgBlue = 0xd0;
+            }
+            else
+            {
+                colorNumber = 5; // Maroon;
+                bgRed = 0xa0;
+                bgGreen = 0x00;
+                bgBlue = 0x30;
+            }
+
+            if (oldColorNumber != colorNumber)
+                clearScreen(bgRed, bgGreen, bgBlue);
+
+            oldColorNumber = colorNumber;
 
             if (displayMode == 0)
             {
-            int x = 10;
-            int y = 10; 
-            count++;
-            
+                int x = 40;
+                int y = 10;
+                const int yMid = 135 / 2;
+                count++;
 
-            
-            snprintf(s, 30, "AQI:  %d   ", calcAqi(airData.pm2_5) );
-            displayStr(s, x, y,0xf0, 0xf0, 0xf0);
-            y = y + 32;
+                snprintf(s, 30, "AQI");
+                displayStr(s, x, yMid - 16, 0xf0, 0xf0, 0xf0, 32);
+                snprintf(s, 30, "%d   ", aqi);
+                displayStr(s, x + 60, yMid - 28, 0xf0, 0xf0, 0xf0, 64);
 
-            snprintf(s, 30, "pm2.5:  %d   ", airData.pm2_5);
-            displayStr(s, x, y,0xf0, 0xf0, 0xf0);
-            y = y + 32;
-            snprintf(s, 30, "0.3 qty:  %d   ", airData.count_3);
-            displayStr(s, x, y,0xf0, 0xf0, 0xf0);
-            y = y + 32;
-            snprintf(s, 30, "Time:  %lld   ", airData.sampleTime/1000000);
-            displayStr(s, x, y,0xf0, 0xf0, 0xf0);
+                //snprintf(s, 30, "PM2.5");
+                //displayStr(s, x+90, y,0xf0, 0xf0, 0xf0, 32);
 
+                //snprintf(s, 30, "%d  ", airData.pm2_5 );
+                //displayStr(s, x+5+90, y,0xf0, 0xf0, 0xf0, 64);
 
-            fillBox(210, 15,  14, 14, 0, 0x0f0>>(count%2), 0);        
+                //snprintf(s, 30, "pm2.5:  %d   ", airData.pm2_5);
+                //displayStr(s, x, y,0xf0, 0xf0, 0xf0);
+                //y = y + 32;
+                //snprintf(s, 30, "0.3 qty:  %d   ", airData.count_3);
+                //displayStr(s, x, y,0xf0, 0xf0, 0xf0);
+                //y = y + 32;
+
+                snprintf(s, 30, "%lld   ", airData.sampleTime / 1000000);
+                displayStr(s, 10, 135 - 32, 0xf0, 0xf0, 0xf0, 32);
+
+                fillBox(210, 15, 14, 14, 0, 0x0f0 >> (count % 2), 0);
             }
             else
             {
@@ -166,30 +221,29 @@ void test1()
                 random = (uint8_t)esp_random();
                 bgRed = random;
                 bgGreen = random;
-                bgBlue  = random;
+                bgBlue = random;
                 clearScreen(random, random, random >> 2);
                 vTaskDelay(50 / portTICK_PERIOD_MS);
 
                 //wrCmmd(ST7789_MADCTL);
                 //wrData(0b01101000);
 
-                
                 int x = 20;
                 int y = 20;
 
                 snprintf(s, 30, "This ");
-                x = displayStr(s, x, y, 0xff,0xff,0xff);
+                x = displayStr(s, x, y, 0xff, 0xff, 0xff, 32);
                 y = y + 32;
                 snprintf(s, 30, "is a ");
-                x = displayStr(s, x, y, 0xff,0xff,0xff);
+                x = displayStr(s, x, y, 0xff, 0xff, 0xff, 32);
                 y = y + 32;
                 snprintf(s, 30, "Test ");
-                x = displayStr(s, x, y, 0xff,0xff,0xff);
+                x = displayStr(s, x, y, 0xff, 0xff, 0xff, 32);
                 y = y + 32;
             }
-            vTaskDelay(1000 / portTICK_PERIOD_MS);   
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
             //count++;
-            fillBox(210, 15,  14, 14, 0, 0x0c0>>(count%2), 0);        
+            fillBox(210, 15, 14, 14, 0, 0x0c0 >> (count % 2), 0);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
     }
@@ -252,8 +306,8 @@ static void rx_task(void *arg)
             }
 
             //printf();
-           // ESP_LOGI(RX_TASK_TAG, "pm2.5 = %d .3um Count = %d ts=%lld", airData.pm2_5,
-           //          airData.count_3, airData.sampleTime);
+            // ESP_LOGI(RX_TASK_TAG, "pm2.5 = %d .3um Count = %d ts=%lld", airData.pm2_5,
+            //          airData.count_3, airData.sampleTime);
         }
 
         //else printf("no data\n");
