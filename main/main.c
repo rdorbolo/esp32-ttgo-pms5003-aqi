@@ -14,6 +14,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/uart.h"
+#include "driver/gpio.h"
 #include "esp_timer.h"
 #include <string.h>
 
@@ -23,6 +24,7 @@
 #define UART_TX 26
 
 extern uint8_t bgRed, bgGreen, bgBlue;
+unsigned test = 0;
 
 struct AirData
 {
@@ -109,7 +111,7 @@ unsigned calcAqi(unsigned pm25)
     }
     int retval = interval_y0 + ((pm25 - interval_x0) * (interval_y1 - interval_y0) / (interval_x1 - interval_x0));
    
-    return retval;
+    return retval + test;
 }
 
 void test1()
@@ -140,7 +142,7 @@ void test1()
             {
                 colorNumber = 0; //green
                 bgRed = 0x00;
-                bgGreen = 0xdf;
+                bgGreen = 0xcf;
                 bgBlue = 0x00;
             }
             else if (aqi < 101)
@@ -178,6 +180,8 @@ void test1()
                 bgGreen = 0x00;
                 bgBlue = 0x30;
             }
+            
+            gpio_set_intr_type(35,GPIO_PIN_INTR_POSEDGE);
 
             if (oldColorNumber != colorNumber)
                 clearScreen(bgRed, bgGreen, bgBlue);
@@ -249,6 +253,12 @@ void test1()
     }
 }
 
+
+void gpio_int(void * arg) {
+    gpio_set_intr_type(35,GPIO_PIN_INTR_DISABLE);
+    test = (test + 50)%500;
+}
+
 static const int RX_BUF_SIZE = 1024;
 
 void init(void)
@@ -265,15 +275,13 @@ void init(void)
     uart_driver_install(UART_NUM_1, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
     uart_param_config(UART_NUM_1, &uart_config);
     uart_set_pin(UART_NUM_1, UART_TX, UART_RX, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+
+    gpio_set_direction(35, GPIO_MODE_INPUT);
+    gpio_set_intr_type(35,GPIO_INTR_POSEDGE);
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(35,gpio_int,NULL);
 }
 
-int sendData(const char *logName, const char *data)
-{
-    const int len = strlen(data);
-    const int txBytes = uart_write_bytes(UART_NUM_1, data, len);
-    ESP_LOGI(logName, "Wrote %d bytes", txBytes);
-    return txBytes;
-}
 
 static void rx_task(void *arg)
 {
