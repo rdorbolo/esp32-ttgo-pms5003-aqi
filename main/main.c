@@ -15,8 +15,10 @@
 #include "esp_log.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include <driver/adc.h>
 #include "esp_timer.h"
 #include <string.h>
+
 
 #include "ttgo.h"
 
@@ -137,6 +139,7 @@ void test1()
         {
             unsigned aqi = calcAqi(airData.pm2_5);
             unsigned colorNumber;
+           
 
             if (aqi < 51)
             {
@@ -213,7 +216,9 @@ void test1()
                 //displayStr(s, x, y,0xf0, 0xf0, 0xf0);
                 //y = y + 32;
 
-                snprintf(s, 30, "%lld   ", airData.sampleTime / 1000000);
+                const int v = 3818+(adc1_get_raw(ADC1_CHANNEL_6)*1000-2080*1000)/625;
+                snprintf(s, 30, "%d.%d  ", v/1000, ( (v%1000) +50)/100 );
+                //snprintf(s, 30, "%lld   ", airData.sampleTime / 1000000);
                 displayStr(s, 10, 135 - 32, 0xf0, 0xf0, 0xf0, 32);
 
                 fillBox(210, 15, 14, 14, 0, 0x0f0 >> (count % 2), 0);
@@ -263,6 +268,11 @@ static const int RX_BUF_SIZE = 1024;
 
 void init(void)
 {
+
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC1_CHANNEL_6,ADC_ATTEN_DB_11);  //channel 6 is gpio 34
+    
+
     const uart_config_t uart_config = {
         .baud_rate = 9600,
         .data_bits = UART_DATA_8_BITS,
