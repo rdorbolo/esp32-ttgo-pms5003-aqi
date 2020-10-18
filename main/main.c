@@ -19,8 +19,7 @@
 #include "esp_timer.h"
 #include <string.h>
 
-
-#include "ttgo.h"
+#include "../../esp32-ttgo-display/main/ttgo.h"
 
 #define UART_RX 27
 #define UART_TX 26
@@ -112,7 +111,7 @@ unsigned calcAqi(unsigned pm25)
         return pm25;
     }
     int retval = interval_y0 + ((pm25 - interval_x0) * (interval_y1 - interval_y0) / (interval_x1 - interval_x0));
-   
+
     return retval + test;
 }
 
@@ -123,6 +122,8 @@ void test1()
     char s[30];
     int count = 0;
     int oldColorNumber = -1;
+    int64_t oldSampleTime = 0;
+    int animationCnt = 0;
 
     while (1)
     {
@@ -137,91 +138,108 @@ void test1()
 
         while (1)
         {
-            unsigned aqi = calcAqi(airData.pm2_5);
-            unsigned colorNumber;
-           
-
-            if (aqi < 51)
-            {
-                colorNumber = 0; //green
-                bgRed = 0x00;
-                bgGreen = 0xcf;
-                bgBlue = 0x00;
-            }
-            else if (aqi < 101)
-            {
-                colorNumber = 1; //yellow
-                bgRed = 0xdf;
-                bgGreen = 0xdf;
-                bgBlue = 0x00;
-            }
-            else if (aqi < 151)
-            {
-                colorNumber = 2; // Orange;
-                bgRed = 0xdf;
-                bgGreen = 0xb0;
-                bgBlue = 0x00;
-            }
-            else if (aqi < 201)
-            {
-                colorNumber = 3; // Red;
-                bgRed = 0xef;
-                bgGreen = 0x00;
-                bgBlue = 0x00;
-            }
-            else if (aqi < 301)
-            {
-                colorNumber = 4; // purple;
-                bgRed = 0xd0;
-                bgGreen = 0x00;
-                bgBlue = 0xd0;
-            }
-            else
-            {
-                colorNumber = 5; // Maroon;
-                bgRed = 0xa0;
-                bgGreen = 0x00;
-                bgBlue = 0x30;
-            }
-            
-            gpio_set_intr_type(35,GPIO_PIN_INTR_POSEDGE);
-
-            if (oldColorNumber != colorNumber)
-                clearScreen(bgRed, bgGreen, bgBlue);
-
-            oldColorNumber = colorNumber;
 
             if (displayMode == 0)
             {
-                int x = 40;
-                int y = 10;
-                const int yMid = 135 / 2;
-                count++;
 
-                snprintf(s, 30, "AQI");
-                displayStr(s, x, yMid - 16, 0xf0, 0xf0, 0xf0, 32);
-                snprintf(s, 30, "%d   ", aqi);
-                displayStr(s, x + 60, yMid - 28, 0xf0, 0xf0, 0xf0, 64);
+                unsigned aqi = calcAqi(airData.pm2_5);
+                unsigned colorNumber;
 
-                //snprintf(s, 30, "PM2.5");
-                //displayStr(s, x+90, y,0xf0, 0xf0, 0xf0, 32);
+                if (aqi < 51)
+                {
+                    colorNumber = 0; //green
+                    bgRed = 0x00;
+                    bgGreen = 0xcf;
+                    bgBlue = 0x00;
+                }
+                else if (aqi < 101)
+                {
+                    colorNumber = 1; //yellow
+                    bgRed = 0xdf;
+                    bgGreen = 0xdf;
+                    bgBlue = 0x00;
+                }
+                else if (aqi < 151)
+                {
+                    colorNumber = 2; // Orange;
+                    bgRed = 0xdf;
+                    bgGreen = 0xb0;
+                    bgBlue = 0x00;
+                }
+                else if (aqi < 201)
+                {
+                    colorNumber = 3; // Red;
+                    bgRed = 0xef;
+                    bgGreen = 0x00;
+                    bgBlue = 0x00;
+                }
+                else if (aqi < 301)
+                {
+                    colorNumber = 4; // purple;
+                    bgRed = 0xd0;
+                    bgGreen = 0x00;
+                    bgBlue = 0xd0;
+                }
+                else
+                {
+                    colorNumber = 5; // Maroon;
+                    bgRed = 0xa0;
+                    bgGreen = 0x00;
+                    bgBlue = 0x30;
+                }
 
-                //snprintf(s, 30, "%d  ", airData.pm2_5 );
-                //displayStr(s, x+5+90, y,0xf0, 0xf0, 0xf0, 64);
+                gpio_set_intr_type(35, GPIO_PIN_INTR_POSEDGE);
 
-                //snprintf(s, 30, "pm2.5:  %d   ", airData.pm2_5);
-                //displayStr(s, x, y,0xf0, 0xf0, 0xf0);
-                //y = y + 32;
-                //snprintf(s, 30, "0.3 qty:  %d   ", airData.count_3);
-                //displayStr(s, x, y,0xf0, 0xf0, 0xf0);
-                //y = y + 32;
+                if (oldColorNumber != colorNumber)
+                    clearScreen(bgRed, bgGreen, bgBlue);
+                oldColorNumber = colorNumber;
 
-                const int v = 3818+(adc1_get_raw(ADC1_CHANNEL_6)*1000-2080*1000)/625;
-                snprintf(s, 30, "%d.%d  ", v/1000, ( (v%1000) +50)/100 );
-                //snprintf(s, 30, "%lld   ", airData.sampleTime / 1000000);
-                displayStr(s, 10, 135 - 32, 0xf0, 0xf0, 0xf0, 32);
+                if (oldSampleTime != airData.sampleTime)
+                {
 
-                fillBox(210, 15, 14, 14, 0, 0x0f0 >> (count % 2), 0);
+                    int x = 40;
+                    // int y = 10;
+                    const int yMid = 135 / 2;
+                    count++;
+
+                    snprintf(s, 30, "AQI");
+                    displayStr(s, x, yMid - 16, 0xf0, 0xf0, 0xf0, 32);
+                    snprintf(s, 30, "%d   ", aqi);
+                    displayStr(s, x + 60, yMid - 28, 0xf0, 0xf0, 0xf0, 64);
+
+                    //snprintf(s, 30, "PM2.5");
+                    //displayStr(s, x+90, y,0xf0, 0xf0, 0xf0, 32);
+
+                    //snprintf(s, 30, "%d  ", airData.pm2_5 );
+                    //displayStr(s, x+5+90, y,0xf0, 0xf0, 0xf0, 64);
+
+                    //snprintf(s, 30, "pm2.5:  %d   ", airData.pm2_5);
+                    //displayStr(s, x, y,0xf0, 0xf0, 0xf0);
+                    //y = y + 32;
+                    //snprintf(s, 30, "0.3 qty:  %d   ", airData.count_3);
+                    //displayStr(s, x, y,0xf0, 0xf0, 0xf0);
+                    //y = y + 32;
+
+                    const int v = 3818 + (adc1_get_raw(ADC1_CHANNEL_6) * 1000 - 2080 * 1000) / 625;
+                    snprintf(s, 30, "%d.%d V  ", v / 1000, ((v % 1000) + 50) / 100);
+                    //snprintf(s, 30, "%lld   ", airData.sampleTime / 1000000);
+                    displayStr(s, 10, 135 - 32, 0xf0, 0xf0, 0xf0, 32);
+
+                    //fillBox(210, 15, 14, 14, 0xff, 0xff, 0xff);
+
+                    animationCnt = 0;
+                    //printf("1\n");
+                }
+
+                if (animationCnt < 10)
+                {
+
+                    const u_int8_t color = 0xff - animationCnt*0x0f;
+                    fillBox(210, 15, 14, 14, color, color, color);
+                    animationCnt++;
+                }
+
+                oldSampleTime = airData.sampleTime;
             }
             else
             {
@@ -250,18 +268,19 @@ void test1()
                 x = displayStr(s, x, y, 0xff, 0xff, 0xff, 32);
                 y = y + 32;
             }
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+            //vTaskDelay(1000 / portTICK_PERIOD_MS);
             //count++;
-            fillBox(210, 15, 14, 14, 0, 0x0c0 >> (count % 2), 0);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+            vTaskDelay(50 / portTICK_PERIOD_MS);
         }
     }
 }
 
-
-void gpio_int(void * arg) {
-    gpio_set_intr_type(35,GPIO_PIN_INTR_DISABLE);
-    test = (test + 50)%500;
+void gpio_int(void *arg)
+{
+    gpio_set_intr_type(35, GPIO_PIN_INTR_DISABLE);
+    test = (test + 50) % 500;
 }
 
 static const int RX_BUF_SIZE = 1024;
@@ -270,8 +289,7 @@ void init(void)
 {
 
     adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(ADC1_CHANNEL_6,ADC_ATTEN_DB_11);  //channel 6 is gpio 34
-    
+    adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11); //channel 6 is gpio 34
 
     const uart_config_t uart_config = {
         .baud_rate = 9600,
@@ -287,11 +305,10 @@ void init(void)
     uart_set_pin(UART_NUM_1, UART_TX, UART_RX, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
     gpio_set_direction(35, GPIO_MODE_INPUT);
-    gpio_set_intr_type(35,GPIO_INTR_POSEDGE);
+    gpio_set_intr_type(35, GPIO_INTR_POSEDGE);
     gpio_install_isr_service(0);
-    gpio_isr_handler_add(35,gpio_int,NULL);
+    gpio_isr_handler_add(35, gpio_int, NULL);
 }
-
 
 static void rx_task(void *arg)
 {
