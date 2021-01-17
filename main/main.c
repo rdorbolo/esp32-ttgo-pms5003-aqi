@@ -318,7 +318,7 @@ void test1()
         else if (displayMode == 3 || displayMode == 4)
         {
             AirData *ad;
-            if (displayMode == 1) ad = &airData1;
+            if (displayMode == 3) ad = &airData1;
             else ad = &airData2;
 
             if (refreshNow)
@@ -494,12 +494,19 @@ static void rxTasks(AirData *airData)
                 airData->pm10 = (((unsigned)data[8]) << 8) + (unsigned)data[9];
                 airData->count_3 = (((unsigned)data[16]) << 8) + (unsigned)data[17];
                 airData->count_5 = (((unsigned)data[18]) << 8) + (unsigned)data[19];
-                airData->count1  = (((unsigned)data[20]) << 8) + (unsigned)data[21];
+                airData->count1    = (((unsigned)data[20]) << 8) + (unsigned)data[21];
+                airData->count2_5  = (((unsigned)data[22]) << 8) + (unsigned)data[23];
+                airData->count5    = (((unsigned)data[24]) << 8) + (unsigned)data[25];
+                airData->count10   = (((unsigned)data[26]) << 8) + (unsigned)data[27];
 
                 //airData.count_3 =
                 airData->sampleTime = esp_timer_get_time();
                 airData->animationCnt = 0;
                 airData->aqi = calcAqi(airData->pm2_5);
+            }
+            else {
+                printf("frame not synchronized\n");
+                uart_read_bytes(airData->uart_num, data, 1, 1000 / portTICK_RATE_MS);
             }
 
             //printf();
@@ -507,7 +514,8 @@ static void rxTasks(AirData *airData)
             //          airData.count_3, airData.sampleTime);
         }
 
-        //else printf("no data\n");
+        else printf("no data\n");
+        
     }
 }
 
